@@ -7,4 +7,9 @@ readme = "README.md"
 repository = "https://github.com/OldUser101/nsbox"
 license = "MIT OR Apache-2.0"
 
+[lib]
+name = "nsbox"
+path = "src/lib/lib.rs"
+
 [dependencies]
+nix = { version = "0.30.1", features = [ "process", "sched" ] }
