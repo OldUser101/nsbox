@@ -11,8 +11,5 @@ license = "MIT OR Apache-2.0"
 name = "nsbox"
 path = "src/lib/lib.rs"
 
-[[bin]]
-name = "nsbox"
-path = "src/bin/main.rs"
-
 [dependencies]
+nix = { version = "0.30.1", features = [ "process", "sched" ] }
