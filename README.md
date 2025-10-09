@@ -1,5 +1,7 @@
 # nsbox
 
+[![CI](https://github.com/OldUser101/nsbox/actions/workflows/ci.yml/badge.svg)](https://github.com/OldUser101/nsbox/actions/workflows/ci.yml)
+
 A lightweight sandbox runner for Linux.
 
 ## License
