@@ -1,6 +1,7 @@
 use crate::Config;
 
 use nix::{
+    mount::{MsFlags, mount},
     sched::{CloneCb, clone},
     sys::wait::{WaitStatus, waitpid},
     unistd::{Pid, pipe, read, write},
@@ -8,7 +9,7 @@ use nix::{
 use std::{
     fs::OpenOptions,
     io::Write,
-    os::fd::{AsRawFd, FromRawFd, OwnedFd},
+    os::fd::{AsRawFd, FromRawFd, OwnedFd, RawFd},
 };
 
 pub struct Sandbox {
@@ -78,6 +79,37 @@ impl Sandbox {
         Ok(())
     }
 
+    /// Set-up the mount namespace in the sandbox environment.
+    ///
+    /// This function exits successfully if the `new_mount` flag is not set.
+    fn setup_mount_namespace(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+        if !config.namespaces.new_mount {
+            return Ok(());
+        }
+
+        // Make all mounts private
+        mount::<str, str, str, str>(None, "/", None, MsFlags::MS_REC | MsFlags::MS_PRIVATE, None)?;
+
+        Ok(())
+    }
+
+    /// Set-up the sandbox environment.
+    ///
+    /// This function is called within the sandboxed environment to prepare it for further execution.
+    fn setup_sandbox(read_pipe: RawFd, config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+        // Read a single byte from the pipe, this blocks until parent set-up is complete
+        let mut buf = [0u8; 1];
+
+        let bytes_read = read(unsafe { OwnedFd::from_raw_fd(read_pipe) }, &mut buf).unwrap();
+        if bytes_read == 0 {
+            return Err("Failed to read initialization pipe.".into());
+        }
+
+        Self::setup_mount_namespace(config)?;
+
+        Ok(())
+    }
+
     /// Run a closure `f` in a sandbox defined by this object.
     pub fn run<F>(&mut self, mut f: F) -> Result<i32, String>
     where
@@ -87,10 +119,11 @@ impl Sandbox {
         let (read_pipe, write_pipe) = pipe().map_err(|e| e.to_string())?;
         let raw_read_pipe = read_pipe.as_raw_fd();
 
-        let cb: CloneCb = Box::new(move || {
-            // Read a single byte from th pipe, this blocks until parent set-up is complete
-            let mut buf = [0u8; 1];
-            let _ = read(unsafe { OwnedFd::from_raw_fd(raw_read_pipe) }, &mut buf).unwrap();
+        let cb: CloneCb = Box::new(|| {
+            if let Err(e) = Self::setup_sandbox(raw_read_pipe, &self.config) {
+                eprintln!("An error occurred while initializing the sandbox: {e}");
+                return 1;
+            }
 
             f()
         });

@@ -31,7 +31,7 @@ fn main() {
         .run(move || {
             match execve(&command, &arguments, &environment) {
                 Ok(_) => {}
-                Err(e) => eprintln!("execve failed: {}", e),
+                Err(e) => eprintln!("execve failed: {e}"),
             }
 
             1
