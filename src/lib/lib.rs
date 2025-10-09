@@ -20,12 +20,16 @@ pub struct Sandbox {
 }
 
 impl Sandbox {
+    /// Create a new `Sandbox` given an optional configuration.
+    ///
+    /// If the configuration is not specificed, a default one will be used.
     pub fn new(config: Option<Config>) -> Self {
         Self {
             config: config.unwrap_or_default(),
         }
     }
 
+    /// Write the `uid_map` file of the sandboxed process.
     fn write_uid_map(
         &self,
         pid: Pid,
@@ -39,6 +43,7 @@ impl Sandbox {
         Ok(())
     }
 
+    /// Write the `setgroups` file of the sandboxed process, to allow groups to be set.
     fn write_deny_setgroups(&self, pid: Pid) -> Result<(), Box<dyn std::error::Error>> {
         let setgroups_path = format!("/proc/{}/setgroups", pid.as_raw());
         let mut setgroups_file = OpenOptions::new().write(true).open(&setgroups_path)?;
@@ -47,6 +52,7 @@ impl Sandbox {
         Ok(())
     }
 
+    /// Write the `gid_map` file of the sandboxed process.
     fn write_gid_map(
         &self,
         pid: Pid,
@@ -60,6 +66,7 @@ impl Sandbox {
         Ok(())
     }
 
+    /// Write user namespace maps for the sandboxed process, from the configuration.
     fn write_user_ns_maps(&self, pid: Pid) -> Result<(), Box<dyn std::error::Error>> {
         if self.config.namespaces.new_user {
             if let Some(uid_map) = self.config.namespaces.user_config.uid_map {
@@ -75,6 +82,7 @@ impl Sandbox {
         Ok(())
     }
 
+    /// Run a closure `f` in a sandbox defined by this object.
     pub fn run<F>(&mut self, mut f: F) -> Result<i32, String>
     where
         F: FnMut() -> isize + 'static,
