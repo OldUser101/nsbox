@@ -12,4 +12,4 @@ name = "nsbox"
 path = "src/lib/lib.rs"
 
 [dependencies]
-nix = { version = "0.30.1", features = [ "mount", "process", "sched", "user" ] }
+nix = { version = "0.30.1", features = [ "fs", "mount", "process", "sched", "user" ] }

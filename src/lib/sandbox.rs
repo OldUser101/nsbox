@@ -1,10 +1,10 @@
-use crate::Config;
+use crate::{Config, namespaces::BindMount};
 
 use nix::{
     mount::{MsFlags, mount},
     sched::{CloneCb, clone},
     sys::wait::{WaitStatus, waitpid},
-    unistd::{Pid, pipe, read, write},
+    unistd::{Pid, chdir, chroot, pipe, read, write},
 };
 use std::{
     fs::OpenOptions,
@@ -79,6 +79,38 @@ impl Sandbox {
         Ok(())
     }
 
+    /// Set-up a new root mount point in the environment.
+    fn setup_new_root(new_root: &str) -> Result<(), Box<dyn std::error::Error>> {
+        chroot(new_root)?;
+        chdir("/")?;
+
+        Ok(())
+    }
+
+    /// Set-up bind mounts specified by `mounts` in the sandboxed environment.
+    fn setup_bind_mounts(mounts: &Vec<BindMount>) -> Result<(), Box<dyn std::error::Error>> {
+        for b in mounts {
+            std::fs::create_dir_all(&b.source)?;
+
+            let mut flags = MsFlags::MS_BIND;
+            if b.recursive {
+                flags |= MsFlags::MS_REC;
+            }
+            mount::<str, str, str, str>(Some(&b.source), &b.target, None, flags, None)?;
+            if b.readonly {
+                mount::<str, str, str, str>(
+                    Some(&b.source),
+                    &b.target,
+                    None,
+                    flags | MsFlags::MS_RDONLY | MsFlags::MS_REMOUNT,
+                    None,
+                )?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Set-up the mount namespace in the sandbox environment.
     ///
     /// This function exits successfully if the `new_mount` flag is not set.
@@ -89,6 +121,14 @@ impl Sandbox {
 
         // Make all mounts private
         mount::<str, str, str, str>(None, "/", None, MsFlags::MS_REC | MsFlags::MS_PRIVATE, None)?;
+
+        if let Some(new_root) = &config.namespaces.mount_config.new_root {
+            Self::setup_new_root(new_root)?;
+        }
+
+        if let Some(bind_mounts) = &config.namespaces.mount_config.bind_mounts {
+            Self::setup_bind_mounts(bind_mounts)?;
+        }
 
         Ok(())
     }
@@ -132,7 +172,7 @@ impl Sandbox {
             clone(
                 cb,
                 &mut stack,
-                self.config.namespaces.into(),
+                self.config.namespaces.clone().into(),
                 Some(nix::libc::SIGCHLD), // Pass SIGCHLD here, otherwise `waitpid` fails
             )
         }
