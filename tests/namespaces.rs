@@ -17,7 +17,7 @@ fn test_pid_namespace() {
     let result = sandbox
         .run(|| {
             let pid = getpid();
-            println!("PID inside sandbox: {}", pid);
+            println!("PID inside sandbox: {pid}");
 
             if pid.as_raw() != 1 {
                 eprintln!("PID namespace test failed!");
@@ -28,7 +28,7 @@ fn test_pid_namespace() {
         })
         .expect("Sandbox failed");
 
-    println!("Sandbox exited with code: {}", result);
+    println!("Sandbox exited with code: {result}");
     assert_eq!(result, 0);
 }
 
@@ -41,7 +41,7 @@ fn test_user_namespace() {
         .run(|| {
             let uid = getuid();
             let gid = getgid();
-            println!("UID, GID inside sandbox: {}, {}", uid, gid);
+            println!("UID, GID inside sandbox: {uid}, {gid}");
 
             // Inside the sandbox, the UID and GID should both be 0
             if uid.as_raw() != 0 || gid.as_raw() != 0 {
@@ -53,7 +53,7 @@ fn test_user_namespace() {
         })
         .expect("Sandbox failed");
 
-    println!("Sandbox exited with code: {}", result);
+    println!("Sandbox exited with code: {result}");
     assert_eq!(result, 0);
 }
 
@@ -85,7 +85,7 @@ fn test_mount_namespace() {
         })
         .expect("Sandbox failed");
 
-    println!("Sandbox exited with code: {}", result);
+    println!("Sandbox exited with code: {result}");
     assert_eq!(result, 0);
 }
 
