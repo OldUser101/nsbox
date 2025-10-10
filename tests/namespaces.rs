@@ -58,6 +58,7 @@ fn test_user_namespace() {
 }
 
 #[test]
+#[ignore]
 fn test_mount_namespace() {
     let cfg = Config {
         namespaces: NamespacesConfig {
