@@ -3,7 +3,7 @@ use nix::{
     unistd::{getgid, getuid},
 };
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct NamespacesConfig {
     pub new_mount: bool,
     pub new_pid: bool,
@@ -14,6 +14,7 @@ pub struct NamespacesConfig {
     pub new_cgroup: bool,
 
     pub user_config: UserNamespaceConfig,
+    pub mount_config: MountNamespaceConfig,
 }
 
 impl Default for NamespacesConfig {
@@ -28,6 +29,7 @@ impl Default for NamespacesConfig {
             new_cgroup: false,
 
             user_config: UserNamespaceConfig::default(),
+            mount_config: MountNamespaceConfig::default(),
         }
     }
 }
@@ -81,4 +83,18 @@ impl Default for UserNamespaceConfig {
             gid_map: Some((0, getgid().as_raw(), 1)),
         }
     }
+}
+
+#[derive(Clone)]
+pub struct BindMount {
+    pub source: String,
+    pub target: String,
+    pub readonly: bool,
+    pub recursive: bool,
+}
+
+#[derive(Clone, Default)]
+pub struct MountNamespaceConfig {
+    pub new_root: Option<String>,
+    pub bind_mounts: Option<Vec<BindMount>>,
 }
